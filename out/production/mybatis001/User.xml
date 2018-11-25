@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--namespace: 对statement分类管理-->
+<mapper namespace="test">
+    <!--select: 表示一个MappedStatement对象-->
+    <!--id: statement的唯一标识
+        #{}: 占位符
+        #{id}： 入参名称，如果入参为简单类型，则入参名称可任意命名
+        parameterType: 输入参数类型
+        resultType: 输出结果类型，不论结果是单条还是list,都是单个java对象类型-->
+    <select id="findUserById" parameterType="int" resultType="com.itheima.mybatis.po.User">
+        select * from user where id = #{id}
+    </select>
+    <!-- 根据用户名称模糊查询用户列表 -->
+    <!-- ${}：表示一个sql的连接符 -->
+    <!-- ${value}：里面的value表示输入参数的参数名称，如果该参数是简单类型，那么${}里面的参数名称必须是value -->
+    <!-- ${}这种写法存在sql注入的风险，所以要慎用！！但是在一些场景下，必须使用${}，比如排序时，动态传入排序的列名，${}会原样输出，不加解释 -->
+    <select id="findUsersByName" parameterType="java.lang.String" resultType="com.itheima.mybatis.po.User">
+         select * from user where username LIKE '%${value}%'
+    </select>
+
+    <insert id="insertUser" parameterType="com.itheima.mybatis.po.User">
+        <selectKey keyProperty="id" resultType="int" order="AFTER">
+            select LAST_INSERT_ID()
+        </selectKey>
+         insert into user (username, sex, birthday, address) values (#{username}, #{sex}, #{birthday}, #{address})
+    </insert>
+
+</mapper>

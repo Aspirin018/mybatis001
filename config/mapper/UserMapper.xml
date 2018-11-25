@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--namespace: 对statement分类管理-->
+<mapper namespace="com.itheima.mybatis.mapper.UserMapper">
+    <!--select: 表示一个MappedStatement对象-->
+    <!--id: statement的唯一标识
+        #{}: 占位符
+        #{id}： 入参名称，如果入参为简单类型，则入参名称可任意命名
+        parameterType: 输入参数类型
+        resultType: 输出结果类型，不论结果是单条还是list,都是单个java对象类型-->
+    <select id="findUserById" parameterType="int" resultType="com.itheima.mybatis.po.User">
+        select * from user where id = #{id}
+    </select>
+    <!-- 根据用户名称模糊查询用户列表 -->
+    <!-- ${}：表示一个sql的连接符 -->
+    <!-- ${value}：里面的value表示输入参数的参数名称，如果该参数是简单类型，那么${}里面的参数名称必须是value -->
+    <!-- ${}这种写法存在sql注入的风险，所以要慎用！！但是在一些场景下，必须使用${}，比如排序时，动态传入排序的列名，${}会原样输出，不加解释 -->
+    <select id="findUsersByName" parameterType="java.lang.String" resultType="com.itheima.mybatis.po.User">
+        select * from user where username LIKE '%${value}%'
+    </select>
+
+
+    <!-- 添加用户 -->
+    <!-- selectKey：查询主键，在标签内需要输入查询主键的sql -->
+    <!-- order：指定查询主键的sql和insert语句的执行顺序，相当于insert语句来说 -->
+    <!-- LAST_INSERT_ID：该函数是mysql的函数，获取自增主键的ID，它必须配合insert语句一起使用 -->
+    <insert id="insertUser" parameterType="com.itheima.mybatis.po.User">
+        <selectKey keyProperty="id" resultType="int" order="AFTER">
+            select LAST_INSERT_ID()
+        </selectKey>
+        insert into user (username, sex, birthday, address) values (#{username}, #{sex}, #{birthday}, #{address})
+    </insert>
+
+    <!-- 自增主键之UUID -->
+    <insert id="insertUser2" parameterType="com.itheima.mybatis.po.User">
+        <selectKey keyProperty="id" resultType="string" order="BEFORE">
+            SELECT UUID()
+        </selectKey>
+
+        INSERT INTO USER
+        (id,username,birthday,sex,address)
+        VALUES(#{id},#{username},#{birthday},#{sex},#{address})
+    </insert>
+
+    <!-- 自增主键之UUID -->
+    <insert id="insertUser3" parameterType="com.itheima.mybatis.po.User">
+        <selectKey keyProperty="id" resultType="int" order="BEFORE">
+            SELECT seq.nextval FROM dual
+        </selectKey>
+
+        INSERT INTO USER
+        (id,username,birthday,sex,address)
+        VALUES(#{id},#{username},#{birthday},#{sex},#{address})
+    </insert>
+    
+    <select id="findUserList" parameterType="com.itheima.mybatis.po.UserQueryVO" resultType="Uuer">
+        SELECT * FROM user WHERE username LIKE '%{user.username}%' AND sex = #{user.sex}
+    </select>
+    
+    <select id="findUserCount" parameterType="com.itheima.mybatis.po.UserQueryVO" resultType="int">
+         SELECT count(*) FROM user WHERE username LIKE '%{user.username}%' AND sex = #{user.sex}
+    </select>
+
+    <resultMap id="UserRstMap" type="user">
+        <id column="id_" property="id"/>
+        <result column="username_" property="username"/>
+        <result column="sex_" property="sex"/>
+    </resultMap>
+    <select id="findUserRstMap" parameterType="int" resultMap="UserRstMap">
+        select id id_, username username_, sex sex_ from user where id = #{id}
+    </select>
+
+    <!-- 综合查询用户信息，需要传入查询条件复杂，比如（用户信息、订单信息、商品信息） -->
+    <select id="findUsersByQueryVO" parameterType="cn.itcast.mybatis.po.QueryUserVO"
+            resultType="User">
+        SELECT * FROM USER
+        <where>
+            <if test="userExt != null">
+                <if test="userExt.sex != null and userExt.sex != ''">
+                    AND sex = #{userExt.sex}
+                </if>
+                <if test="userExt.username != null and userExt.username != ''">
+                    AND username LIKE '%${userExt.username}%'
+                </if>
+            </if>
+        </where>
+    </select>
+
+    <!-- 综合查询用户信息总数，需要传入查询条件复杂，比如（用户信息、订单信息、商品信息） -->
+    <select id="findUsersCount" parameterType="QueryUserVO"
+            resultType="int">
+        SELECT count(1) FROM USER
+        <where>
+            <if test="userExt != null">
+                <if test="userExt.sex != null and userExt.sex != ''">
+                    AND sex = #{userExt.sex}
+                </if>
+                <if test="userExt.username != null and userExt.username != ''">
+                    AND username LIKE '%${userExt.username}%'
+                </if>
+            </if>
+        </where>
+    </select>
+
+
+    <!-- 定义SQL片段 -->
+    <!--
+        [sql标签]：定义一个SQL片段
+        [id]：SQL片段的唯一标识
+        建议：
+            1、SQL片段中的内容最好是以单表来定义
+            2、如果是查询字段，则不要写上SELECT
+            3、如果是条件语句，则不要写上WHERE
+     -->
+    <sql id="select_user_where">
+        <if test="userExt != null">
+            <if test="userExt.sex != null and userExt.sex != ''">
+                AND sex = #{userExt.sex}
+            </if>
+            <if test="userExt.username != null and userExt.username != ''">
+                AND username LIKE '%${userExt.username}%'
+            </if>
+        </if>
+    </sql>
+    <!-- 根据用户id来查询用户信息（使用SQL片段） -->
+    <!--
+        [include标签]：引用已经定义好的SQL片段
+        [refid]：引用的SQL片段id
+    -->
+    <select id="findUserList" parameterType="userQueryVO" resultType="userExt">
+
+        SELECT * FROM USER
+        <where>
+            <include refid="select_user_where"/>
+        </where>
+    </select>
+    <!-- 综合查询用户信息总数，需要传入查询条件复杂，比如（用户信息、订单信息、商品信息） -->
+    <select id="findUsersCount" parameterType="QueryUserVO"
+            resultType="int">
+        SELECT count(1) FROM USER
+        <where>
+            <include refid="select_user_where"/>
+        </where>
+    </select>
+
+    <!-- [foreach标签]：表示一个foreach循环 -->
+    <!-- [collection]：集合参数的名称，如果是直接传入集合参数，则该处的参数名称只能填写[list]。 -->
+    <!-- [item]：每次遍历出来的对象 -->
+    <!-- [open]：开始遍历时拼接的串 -->
+    <!-- [close]：结束遍历时拼接的串 -->
+    <!-- [separator]：遍历出的每个对象之间需要拼接的字符 -->
+    <if test="idList != null and idList.size > 0">
+        <foreach collection="idList" item="id" open="AND id IN (" close=")" separator=",">
+            #{id}
+        </foreach>
+    </if>
+
+    <!-- 根据用户ID的集合查询用户列表（学习foreach标签之直接传ID集合） -->
+    <!--
+        [foreach标签]：表示一个foreach循环
+        [collection]：集合参数的名称，如果是直接传入集合参数，则该处的参数名称只能填写[list]。
+        [item]：定义遍历集合之后的参数名称
+        [open]：开始遍历之前需要拼接的SQL串
+        [close]：结束遍历之后需要拼接的SQL串
+        [separator]：遍历出的每个对象之间需要拼接的字符
+     -->
+    <select id="findUsersByIdList" parameterType="java.util.List" resultType="user">
+        SELECT * FROM USER
+        <where>
+            <if test="list != null and list.size > 0">
+                <foreach collection="list" item="id" open="AND id IN (" close=")" separator=",">
+                    #{id}
+                </foreach>
+            </if>
+        </where>
+    </select>
+
+
+
+</mapper>
